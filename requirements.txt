@@ -1,0 +1,6 @@
+mediapipe
+opencv-contrib-python
+customtkinter
+pillow
+pygame
+numpy
