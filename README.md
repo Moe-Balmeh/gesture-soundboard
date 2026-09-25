@@ -4,7 +4,9 @@ Play meme sounds with hand gestures and facial expressions, live on your webcam.
 
 ![Demo](assets/demoV1.gif)
 
-🎬 [Watch the full demo with sound](https://drive.google.com/file/d/1ATZzzxDKFa7Ssc0xhwM8wj_Cj2zCe84p/view?usp=sharing)
+🎬 Watch the full demos with sound:
+- [Version 2](https://drive.google.com/file/d/1EY29OSpO9DdGiJB4h5Xu8Q9E5znVsyeM/view?usp=sharing): virtual camera, global hotkey, tray icon, light theme
+- [Version 1](https://drive.google.com/file/d/1ATZzzxDKFa7Ssc0xhwM8wj_Cj2zCe84p/view?usp=sharing): the original soundboard
 
 ## Run it
 
