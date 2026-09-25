@@ -7,6 +7,8 @@ import pygame
 
 from app.paths import SOUNDS_DIR
 
+from .virtual_mic import VirtualMic
+
 SOUND_EXTENSIONS = {".wav", ".mp3", ".ogg"}
 
 
@@ -21,14 +23,25 @@ class SoundPlayer:
         pygame.mixer.init(frequency=44100)
         pygame.mixer.set_num_channels(16)  # so sounds can overlap
         self._loaded = {}
+        self.virtual_mic = VirtualMic()
 
-    def play(self, name):
+    def play(self, name, to_mic=True):
         path = SOUNDS_DIR / name
         if not path.exists():
             return
         if name not in self._loaded:
             self._loaded[name] = pygame.mixer.Sound(str(path))
-        self._loaded[name].play()
+        sound = self._loaded[name]
+        sound.play()
+        if to_mic and self.virtual_mic.is_open:
+            self.virtual_mic.play(pygame.sndarray.array(sound))
+
+    def set_virtual_mic(self, on):
+        if on and not self.virtual_mic.is_open:
+            self.virtual_mic.open()
+        elif not on:
+            self.virtual_mic.close()
+            self.virtual_mic.error = None
 
     def beep(self, rising):
         # two quick tones, going up = on, going down = off
@@ -39,6 +52,9 @@ class SoundPlayer:
         samples = (tone * 0.3 * 32767).astype(np.int16)
         channels = pygame.mixer.get_init()[2]
         pygame.sndarray.make_sound(np.repeat(samples[:, None], channels, axis=1)).play()
+
+    def close(self):
+        self.virtual_mic.close()
 
     def forget_loaded_sounds(self):
         self._loaded.clear()

@@ -23,8 +23,9 @@ The first run downloads the AI models (~10 MB) into `models/`.
 ## How it works
 
 ```
- Webcam ──► CAMERA ──► DETECTION ──► LOGIC ──► AUDIO ──► 🔊
+ Webcam ──► CAMERA ──► DETECTION ──► LOGIC ──► AUDIO ──► 🔊 speakers
            (OpenCV)   (MediaPipe)   (engine)  (pygame)
+                                                  └─► 🎙️ virtual mic (sounddevice) ◄── your real mic
                                        │
                                        ▼
                                       UI  (window, live preview, settings)
@@ -33,7 +34,7 @@ The first run downloads the AI models (~10 MB) into `models/`.
 1. **Camera** grabs a frame from the webcam (~30 per second).
 2. **Detection** runs two Google MediaPipe AI models on it: one recognizes hand gestures, the other scores face movements from 0 to 1 (e.g. `jawOpen = 0.9`).
 3. **Logic** decides when to play a sound: a gesture must be held for a few frames (so random movements don't trigger it), and each gesture has a cooldown (so it can't spam).
-4. **Audio** plays the sound picked for that gesture.
+4. **Audio** plays the sound picked for that gesture on your speakers, and (if the virtual mic is on) mixes it with your real mic into a virtual cable, so people on the call hear both. Your mic and the cable run on separate clocks, so the mixer keeps the mic buffer short (skips ahead if it builds past 0.1 s) to stop your voice from slowly lagging behind.
 5. **UI** shows the live preview and lets you choose sounds. It runs separately from the camera loop (on its own thread), so the window never freezes.
 
 ## Project structure
@@ -48,7 +49,9 @@ gesture-soundboard/
 │   │   ├── theme.py             colors and fonts
 │   │   ├── widgets.py           reusable pieces (cards, switches, gesture rows)
 │   │   ├── tray.py              the tray icon and its menu
+│   │   ├── help_button.py       the ? Help popup (what to install, how to use)
 │   │   ├── hotkey_card.py       the card for changing the keyboard shortcut
+│   │   ├── sound_card.py        mic picker and volume sliders
 │   │   └── main_window.py       the window layout and buttons
 │   │
 │   ├── camera/              OpenCV: turns the webcam on/off, reads frames
@@ -65,7 +68,8 @@ gesture-soundboard/
 │   │   └── single_instance.py   opening the app twice shows the running one
 │   │
 │   ├── audio/               Plays sound files
-│   │   └── sound_player.py
+│   │   ├── sound_player.py
+│   │   └── virtual_mic.py       mixes your mic + the sounds into Zoom / Meet / Discord
 │   │
 │   ├── settings/            Saves your choices to config.json
 │   │   └── settings.py
@@ -81,6 +85,17 @@ gesture-soundboard/
 1. Install [OBS Studio](https://obsproject.com/) (the app uses its virtual camera driver, OBS doesn't need to be open).
 2. Turn on **Virtual camera** in the sidebar.
 3. In your call or stream app, pick **OBS Virtual Camera** as your camera.
+
+### So the call can hear you and the sounds (virtual mic)
+
+1. Install [VB-Audio Virtual Cable](https://vb-audio.com/Cable/) (free) and restart your PC.
+2. Turn on **Virtual mic** in the sidebar.
+3. Under **Call audio**, pick your real microphone. The app mixes your voice and the sounds together.
+4. In your call app, pick **CABLE Output** as your microphone.
+
+The **Voice** and **Sounds** sliders set how loud each one is in the call. The ▶ preview buttons only play on your speakers, so you can test sounds without the call hearing them.
+
+**Discord tips:** set Noise Suppression to *None* (Krisp removes anything that isn't a voice, including the sounds) and turn off automatic input sensitivity.
 
 ## Gestures
 
@@ -104,5 +119,5 @@ Drop `.mp3` / `.wav` / `.ogg` files into `assets/sounds/`, click **Reload sounds
 - [x] System tray icon (keeps running when the window is closed)
 - [x] Global hotkey to turn gestures on/off (changeable in the app)
 - [x] Turn individual gestures on/off
-- [ ] Virtual microphone mixing (mic + soundboard)
+- [x] Virtual microphone: your voice + the sounds mixed into Zoom / Meet / Discord
 - [ ] Packaged `.exe` release

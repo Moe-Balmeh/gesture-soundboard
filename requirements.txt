@@ -3,6 +3,7 @@ opencv-contrib-python
 customtkinter
 pillow
 pygame
+sounddevice
 pyvirtualcam
 pystray
 pynput

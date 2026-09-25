@@ -5,6 +5,7 @@ import customtkinter as ctk
 from PIL import Image
 
 from app.audio.sound_player import SoundPlayer, list_sounds
+from app.audio.virtual_mic import list_mics
 from app.detection.gestures import FACE_EXPRESSIONS, HAND_GESTURES
 from app.logic.engine import PREVIEW_SIZE, Engine
 from app.logic.hotkeys import HotkeyListener
@@ -13,7 +14,9 @@ from app.paths import SOUNDS_DIR
 from app.settings.settings import load_settings, save_settings
 
 from . import theme
+from .help_button import HelpButton
 from .hotkey_card import HotkeyCard
+from .sound_card import SoundCard
 from .tray import Tray
 from .widgets import NO_SOUND, GestureRow, ToggleRow, card, outline_button
 
@@ -25,16 +28,21 @@ class MainWindow(ctk.CTk):
         super().__init__(fg_color=theme.BG)
         self.title("Gesture Soundboard")
         self.geometry("1280x720")
-        self.minsize(1200, 640)
+        self.minsize(1200, 700)
 
         self.settings = load_settings()
         self.player = SoundPlayer()
+        mic = self.player.virtual_mic
+        mic.mic_name = self.settings["mic_device"]
+        mic.mic_volume = self.settings["mic_volume"]
+        mic.sounds_volume = self.settings["sounds_volume"]
         self.engine = Engine(self.settings, self.player)
 
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
         self._build_sidebar()
         self._build_main_area()
+        self._update_virtual_mic()
 
         # the tray and the hotkey run on their own threads, they send actions here
         self.actions = queue.Queue()
@@ -72,13 +80,14 @@ class MainWindow(ctk.CTk):
         ).grid(row=1, column=0, sticky="w", padx=24)
 
         controls = card(sidebar)
-        controls.grid(row=2, column=0, sticky="ew", padx=16, pady=(28, 0))
+        controls.grid(row=2, column=0, sticky="ew", padx=16, pady=(20, 0))
         controls.grid_columnconfigure(0, weight=1)
         self.toggles = {}
         toggle_rows = [
             ("camera_on", "Camera", "On · live", "Off · free for other apps"),
             ("gestures_on", "Gestures", "On · listening", "Off · paused"),
             ("virtual_cam_on", "Virtual camera", "On · pick \"OBS Virtual Camera\" in Zoom/Meet", "Off"),
+            ("virtual_mic_on", "Virtual mic", "On · pick \"CABLE Output\" in Zoom/Meet", "Off"),
         ]
         for i, (key, title, on_text, off_text) in enumerate(toggle_rows):
             if i > 0:
@@ -90,7 +99,7 @@ class MainWindow(ctk.CTk):
                 lambda on, key=key: self._set_toggle(key, on),
             )
             first, last = i == 0, i == len(toggle_rows) - 1
-            row.grid(row=i * 2, column=0, sticky="ew", padx=(16, 10), pady=(14 if first else 10, 14 if last else 10))
+            row.grid(row=i * 2, column=0, sticky="ew", padx=(16, 10), pady=(12 if first else 7, 12 if last else 7))
             self.toggles[key] = row
         self._shown_vcam_error = None
 
@@ -98,7 +107,7 @@ class MainWindow(ctk.CTk):
             sidebar, text="", justify="left", anchor="w", wraplength=220,
             font=theme.font(13), text_color=theme.TEXT_MUTED,
         )
-        self.last_played_label.grid(row=3, column=0, sticky="w", padx=24, pady=(16, 0))
+        self.last_played_label.grid(row=3, column=0, sticky="w", padx=24, pady=(12, 8))
 
         outline_button(sidebar, "Open sounds folder", lambda: os.startfile(SOUNDS_DIR)).grid(
             row=5, column=0, sticky="ew", padx=16, pady=(0, 8)
@@ -117,7 +126,7 @@ class MainWindow(ctk.CTk):
         appearance.grid(row=7, column=0, sticky="ew", padx=16, pady=(0, 16))
         # the X button only hides to the tray, this one really closes
         outline_button(sidebar, "Quit app", self._quit, text_color=theme.DANGER).grid(
-            row=8, column=0, sticky="ew", padx=16, pady=(0, 24)
+            row=8, column=0, sticky="ew", padx=16, pady=(0, 16)
         )
 
     def _build_main_area(self):
@@ -129,6 +138,7 @@ class MainWindow(ctk.CTk):
         ctk.CTkLabel(
             main, text="Gestures", font=theme.font(32, heading=True), text_color=theme.TEXT, anchor="w"
         ).grid(row=0, column=0, columnspan=2, sticky="w")
+        HelpButton(main).grid(row=0, column=1, sticky="e", padx=(0, 8))
         ctk.CTkLabel(
             main, text="Pick a sound for each gesture. Hold the gesture for a moment to play it.",
             font=theme.font(14), text_color=theme.TEXT_MUTED, anchor="w",
@@ -153,6 +163,11 @@ class MainWindow(ctk.CTk):
         HotkeyCard(left, self.settings["hotkey"], self._on_hotkey_changed, self._on_hotkey_recording).grid(
             row=1, column=0, sticky="ew", pady=(16, 0)
         )
+        self.sound_card = SoundCard(
+            left, list_mics(), self.settings["mic_device"], self.settings["mic_volume"],
+            self.settings["sounds_volume"], self._on_mic_picked, self._on_volume,
+        )
+        self.sound_card.grid(row=2, column=0, sticky="ew", pady=(16, 0))
 
         gesture_list = ctk.CTkScrollableFrame(
             main, fg_color="transparent", scrollbar_button_color=theme.BORDER,
@@ -194,8 +209,26 @@ class MainWindow(ctk.CTk):
         self.toggles[key].set_on(on)
         if key == "virtual_cam_on":
             self._shown_vcam_error = None
+        elif key == "virtual_mic_on":
+            self._update_virtual_mic()
         save_settings(self.settings)
         self.tray.refresh()
+
+    def _update_virtual_mic(self):
+        self.player.set_virtual_mic(self.settings["virtual_mic_on"])
+        self.toggles["virtual_mic_on"].show_status(self.player.virtual_mic.error)
+        self.sound_card.show_error(self.player.virtual_mic.mic_error)
+
+    def _on_mic_picked(self, name):
+        self.settings["mic_device"] = name
+        self.player.virtual_mic.set_mic(name)
+        self.sound_card.show_error(self.player.virtual_mic.mic_error)
+        save_settings(self.settings)
+
+    def _on_volume(self, key, value):
+        self.settings[key] = value
+        setattr(self.player.virtual_mic, key, value)
+        save_settings(self.settings)
 
     def _on_hotkey_changed(self, hotkey):
         self.settings["hotkey"] = hotkey
@@ -214,7 +247,7 @@ class MainWindow(ctk.CTk):
 
     def _play_sound(self, sound):
         if sound != NO_SOUND:
-            self.player.play(sound)
+            self.player.play(sound, to_mic=False)  # previews only go to your speakers
 
     def _reload_sounds(self):
         self.player.forget_loaded_sounds()
@@ -241,6 +274,7 @@ class MainWindow(ctk.CTk):
         self.tray.stop()
         self.hotkeys.stop()
         self.engine.stop()
+        self.player.close()
         self.destroy()
 
     def _handle_actions(self):

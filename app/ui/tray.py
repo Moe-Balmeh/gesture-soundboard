@@ -4,7 +4,10 @@ from PIL import Image, ImageDraw
 ON_COLOR = "#8B5CF6"
 OFF_COLOR = "#6B6963"
 
-TOGGLES = [("Camera", "camera_on"), ("Gestures", "gestures_on"), ("Virtual camera", "virtual_cam_on")]
+TOGGLES = [
+    ("Camera", "camera_on"), ("Gestures", "gestures_on"), ("Virtual camera", "virtual_cam_on"),
+    ("Virtual mic", "virtual_mic_on"),
+]
 
 
 def make_icon(on):
