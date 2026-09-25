@@ -2,6 +2,10 @@
 
 Play meme sounds with hand gestures and facial expressions, live on your webcam. Built for streamers and video calls.
 
+![Demo](assets/demoV1.gif)
+
+🎬 [Watch the full demo with sound](https://drive.google.com/file/d/1ATZzzxDKFa7Ssc0xhwM8wj_Cj2zCe84p/view?usp=sharing)
+
 ## Run it
 
 Double-click **`Start Soundboard.bat`**, or:
