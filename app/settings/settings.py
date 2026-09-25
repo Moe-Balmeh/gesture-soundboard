@@ -2,6 +2,7 @@ import copy
 import json
 
 from app.detection.gestures import ALL_GESTURES
+from app.logic.hotkeys import DEFAULT_HOTKEY
 from app.paths import SETTINGS_FILE
 
 DEFAULT_SETTINGS = {
@@ -10,7 +11,9 @@ DEFAULT_SETTINGS = {
     "virtual_cam_on": False,
     "camera_index": 0,
     "cooldown_seconds": 1.3,
+    "hotkey": DEFAULT_HOTKEY,
     "mappings": {name: None for name, _ in ALL_GESTURES},
+    "enabled_gestures": {name: True for name, _ in ALL_GESTURES},
 }
 
 

@@ -5,12 +5,15 @@ import customtkinter as ctk
 from PIL import Image
 
 from app.audio.sound_player import SoundPlayer, list_sounds
-from app.detection.gestures import ALL_GESTURES
+from app.detection.gestures import FACE_EXPRESSIONS, HAND_GESTURES
 from app.logic.engine import PREVIEW_SIZE, Engine
+from app.logic.hotkeys import HotkeyListener
+from app.logic.single_instance import listen_for_show
 from app.paths import SOUNDS_DIR
 from app.settings.settings import load_settings, save_settings
 
 from . import theme
+from .hotkey_card import HotkeyCard
 from .tray import Tray
 from .widgets import NO_SOUND, GestureRow, ToggleRow, card, outline_button
 
@@ -33,12 +36,16 @@ class MainWindow(ctk.CTk):
         self._build_sidebar()
         self._build_main_area()
 
-        self.tray_actions = queue.Queue()
-        self.tray = Tray(self.settings, self.tray_actions.put)
+        # the tray and the hotkey run on their own threads, they send actions here
+        self.actions = queue.Queue()
+        self.tray = Tray(self.settings, self.actions.put)
+        self.hotkeys = HotkeyListener(self.settings, lambda: self.actions.put(("hotkey",)))
         self._told_about_tray = False
 
+        listen_for_show(lambda: self.actions.put(("show",)))
         self.engine.start()
         self.tray.start()
+        self.hotkeys.start()
         self.protocol("WM_DELETE_WINDOW", self._hide_to_tray)
         self._refresh_id = self.after(REFRESH_MS, self._refresh)
 
@@ -51,10 +58,14 @@ class MainWindow(ctk.CTk):
         sidebar.grid_columnconfigure(0, weight=1)
         sidebar.grid_rowconfigure(4, weight=1)
 
+        title = ctk.CTkFrame(sidebar, fg_color="transparent")
+        title.grid(row=0, column=0, sticky="w", padx=24, pady=(28, 4))
         ctk.CTkLabel(
-            sidebar, text="Gesture\nSoundboard", justify="left", anchor="w",
-            font=theme.font(26, heading=True), text_color=theme.TEXT,
-        ).grid(row=0, column=0, sticky="w", padx=24, pady=(28, 4))
+            title, text="Gesture", font=theme.font(26, heading=True), text_color=theme.TEXT, anchor="w", height=30
+        ).grid(row=0, column=0, sticky="w")
+        ctk.CTkLabel(
+            title, text="Soundboard", font=theme.font(26, heading=True), text_color=theme.ACCENT, anchor="w", height=30
+        ).grid(row=1, column=0, sticky="w")
         ctk.CTkLabel(
             sidebar, text="Meme sounds on cue for\nyour calls and streams.", justify="left",
             anchor="w", font=theme.font(13), text_color=theme.TEXT_MUTED,
@@ -98,9 +109,9 @@ class MainWindow(ctk.CTk):
         appearance = ctk.CTkSegmentedButton(
             sidebar, values=["System", "Light", "Dark"], command=self._on_appearance,
             font=theme.font(12), height=30, corner_radius=8,
-            fg_color=theme.SURFACE_HOVER, unselected_color=theme.SURFACE_HOVER,
-            unselected_hover_color=theme.BORDER, selected_color=theme.ACCENT_SOFT,
-            selected_hover_color=theme.ACCENT_SOFT, text_color=theme.TEXT,
+            fg_color=theme.CHIP_TRACK, unselected_color=theme.CHIP_TRACK,
+            unselected_hover_color=theme.SURFACE_HOVER, selected_color=theme.CHIP_SELECTED,
+            selected_hover_color=theme.CHIP_SELECTED, text_color=theme.TEXT,
         )
         appearance.set("System")
         appearance.grid(row=7, column=0, sticky="ew", padx=16, pady=(0, 16))
@@ -124,8 +135,10 @@ class MainWindow(ctk.CTk):
         ).grid(row=1, column=0, columnspan=2, sticky="w", pady=(2, 20))
 
         # video and placeholder sit in the same spot, only one is shown
-        camera_card = card(main, radius=16)
-        camera_card.grid(row=2, column=0, sticky="n", padx=(0, 20))
+        left = ctk.CTkFrame(main, fg_color="transparent")
+        left.grid(row=2, column=0, sticky="n", padx=(0, 20))
+        camera_card = card(left, radius=16)
+        camera_card.grid(row=0, column=0, sticky="ew")
         self.preview_image = ctk.CTkImage(Image.new("RGB", PREVIEW_SIZE), size=PREVIEW_SIZE)
         self.video = ctk.CTkLabel(camera_card, text="", image=self.preview_image)
         self.video.grid(row=0, column=0, padx=10, pady=10)
@@ -137,6 +150,10 @@ class MainWindow(ctk.CTk):
         self.placeholder.grid(row=0, column=0, padx=10, pady=10)
         self.video.grid_remove()
 
+        HotkeyCard(left, self.settings["hotkey"], self._on_hotkey_changed, self._on_hotkey_recording).grid(
+            row=1, column=0, sticky="ew", pady=(16, 0)
+        )
+
         gesture_list = ctk.CTkScrollableFrame(
             main, fg_color="transparent", scrollbar_button_color=theme.BORDER,
             scrollbar_button_hover_color=theme.TEXT_MUTED,
@@ -145,14 +162,29 @@ class MainWindow(ctk.CTk):
         gesture_list.grid_columnconfigure(0, weight=1)
 
         sound_names = list_sounds()
+        enabled = self.settings["enabled_gestures"]
         self.rows = []
-        for i, (gesture, kind) in enumerate(ALL_GESTURES):
-            row = GestureRow(
-                gesture_list, gesture, kind, self.settings["mappings"].get(gesture),
-                sound_names, self._on_sound_picked, self._play_sound,
-            )
-            row.grid(row=i, column=0, sticky="ew", pady=(0, 10), padx=(0, 8))
-            self.rows.append(row)
+        groups = [("Hand gestures", list(HAND_GESTURES.values())), ("Face expressions", list(FACE_EXPRESSIONS))]
+        for i, (title, gestures) in enumerate(groups):
+            group = card(gesture_list, radius=16)
+            group.grid(row=i, column=0, sticky="ew", pady=(0, 16), padx=(0, 8))
+            group.grid_columnconfigure(0, weight=1)
+            ctk.CTkLabel(
+                group, text=title, font=theme.font(16, heading=True), text_color=theme.TEXT, anchor="w"
+            ).grid(row=0, column=0, sticky="w", padx=16, pady=(14, 6))
+
+            for j, gesture in enumerate(gestures):
+                if j > 0:
+                    ctk.CTkFrame(group, height=1, fg_color=theme.BORDER).grid(
+                        row=j * 2, column=0, sticky="ew", padx=16
+                    )
+                row = GestureRow(
+                    group, gesture, self.settings["mappings"].get(gesture), sound_names,
+                    enabled.get(gesture, True), self._on_sound_picked, self._play_sound, self._on_gesture_enabled,
+                )
+                last = j == len(gestures) - 1
+                row.grid(row=j * 2 + 1, column=0, sticky="ew", padx=6, pady=(2, 8 if last else 2))
+                self.rows.append(row)
 
     # actions
 
@@ -165,8 +197,19 @@ class MainWindow(ctk.CTk):
         save_settings(self.settings)
         self.tray.refresh()
 
+    def _on_hotkey_changed(self, hotkey):
+        self.settings["hotkey"] = hotkey
+        save_settings(self.settings)
+
+    def _on_hotkey_recording(self, recording):
+        self.hotkeys.paused = recording
+
     def _on_sound_picked(self, gesture, sound):
         self.settings["mappings"][gesture] = None if sound == NO_SOUND else sound
+        save_settings(self.settings)
+
+    def _on_gesture_enabled(self, gesture, on):
+        self.settings["enabled_gestures"][gesture] = on
         save_settings(self.settings)
 
     def _play_sound(self, sound):
@@ -196,13 +239,18 @@ class MainWindow(ctk.CTk):
     def _quit(self):
         self.after_cancel(self._refresh_id)
         self.tray.stop()
+        self.hotkeys.stop()
         self.engine.stop()
         self.destroy()
 
-    def _handle_tray_actions(self):
-        while not self.tray_actions.empty():
-            action, *args = self.tray_actions.get()
-            if action == "show":
+    def _handle_actions(self):
+        while not self.actions.empty():
+            action, *args = self.actions.get()
+            if action == "hotkey":
+                on = not self.settings["gestures_on"]
+                self._set_toggle("gestures_on", on)
+                self.player.beep(rising=on)
+            elif action == "show":
                 self._show()
             elif action == "toggle":
                 key = args[0]
@@ -215,7 +263,7 @@ class MainWindow(ctk.CTk):
     # live updates
 
     def _refresh(self):
-        if self._handle_tray_actions():
+        if self._handle_actions():
             return  # app is closing
 
         frame = self.engine.take_preview()

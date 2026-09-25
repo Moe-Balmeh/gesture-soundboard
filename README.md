@@ -46,6 +46,7 @@ gesture-soundboard/
 │   │   ├── theme.py             colors and fonts
 │   │   ├── widgets.py           reusable pieces (cards, switches, gesture rows)
 │   │   ├── tray.py              the tray icon and its menu
+│   │   ├── hotkey_card.py       the card for changing the keyboard shortcut
 │   │   └── main_window.py       the window layout and buttons
 │   │
 │   ├── camera/              OpenCV: turns the webcam on/off, reads frames
@@ -57,7 +58,9 @@ gesture-soundboard/
 │   │   └── detector.py          runs the AI models
 │   │
 │   ├── logic/               The brain: connects camera → detection → audio
-│   │   └── engine.py
+│   │   ├── engine.py
+│   │   ├── hotkeys.py           global keyboard shortcut (works in any app)
+│   │   └── single_instance.py   opening the app twice shows the running one
 │   │
 │   ├── audio/               Plays sound files
 │   │   └── sound_player.py
@@ -83,6 +86,8 @@ gesture-soundboard/
 |---|---|
 | Thumbs Up, Thumbs Down, Peace Sign, Open Palm, Fist, Pointing Up, Rock On | Mouth Open, Big Smile, Eyebrows Raised |
 
+Each gesture has its own on/off switch, and **Ctrl + Shift + G** turns all of them on/off from any app (you can change the shortcut in the app).
+
 ## Sounds
 
 Drop `.mp3` / `.wav` / `.ogg` files into `assets/sounds/`, click **Reload sounds**, and pick one for each gesture from the dropdowns.
@@ -95,6 +100,7 @@ Drop `.mp3` / `.wav` / `.ogg` files into `assets/sounds/`, click **Reload sounds
 - [x] Virtual camera output (use in Zoom / Meet / TikTok Live Studio)
 - [x] 720p HD at 30 fps
 - [x] System tray icon (keeps running when the window is closed)
-- [ ] Global hotkey to turn gestures on/off
+- [x] Global hotkey to turn gestures on/off (changeable in the app)
+- [x] Turn individual gestures on/off
 - [ ] Virtual microphone mixing (mic + soundboard)
 - [ ] Packaged `.exe` release

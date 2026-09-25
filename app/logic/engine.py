@@ -110,6 +110,8 @@ class Engine:
             self.virtual_cam.send_off_screen()
 
     def _play_new_gestures(self, found):
+        enabled = self.settings["enabled_gestures"]
+        found = {g for g in found if enabled.get(g, True)}
         self.active_gestures = frozenset(found)
         self._held = {g: self._held.get(g, 0) + 1 for g in found}
 
