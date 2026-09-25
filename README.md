@@ -48,7 +48,8 @@ gesture-soundboard/
 │   │   └── main_window.py       the window layout and buttons
 │   │
 │   ├── camera/              OpenCV: turns the webcam on/off, reads frames
-│   │   └── webcam.py
+│   │   ├── webcam.py
+│   │   └── virtual_cam.py       sends the video to Zoom / Meet / TikTok Live
 │   │
 │   ├── detection/           MediaPipe AI: finds gestures in a frame
 │   │   ├── gestures.py          the gesture list and face thresholds (tune here)
@@ -69,6 +70,12 @@ gesture-soundboard/
 └── models/                  AI models (auto-downloaded, not in git)
 ```
 
+## Use it in Zoom / Meet / TikTok Live
+
+1. Install [OBS Studio](https://obsproject.com/) (the app uses its virtual camera driver, OBS doesn't need to be open).
+2. Turn on **Virtual camera** in the sidebar.
+3. In your call or stream app, pick **OBS Virtual Camera** as your camera.
+
 ## Gestures
 
 | Hand | Face |
@@ -84,7 +91,8 @@ Drop `.mp3` / `.wav` / `.ogg` files into `assets/sounds/`, click **Reload sounds
 - [x] Hand gesture + face expression detection
 - [x] Sound picker UI with light/dark mode
 - [x] Camera on/off toggle
-- [ ] Virtual camera output (use in Zoom / Meet / TikTok Live Studio)
+- [x] Virtual camera output (use in Zoom / Meet / TikTok Live Studio)
+- [x] 720p HD at 30 fps
 - [ ] System tray + global on/off hotkey
 - [ ] Virtual microphone mixing (mic + soundboard)
 - [ ] Packaged `.exe` release

@@ -3,4 +3,5 @@ opencv-contrib-python
 customtkinter
 pillow
 pygame
+pyvirtualcam
 numpy

@@ -7,6 +7,7 @@ from app.paths import SETTINGS_FILE
 DEFAULT_SETTINGS = {
     "camera_on": True,
     "gestures_on": True,
+    "virtual_cam_on": False,
     "camera_index": 0,
     "cooldown_seconds": 1.3,
     "mappings": {name: None for name, _ in ALL_GESTURES},

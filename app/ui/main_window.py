@@ -66,7 +66,14 @@ class MainWindow(ctk.CTk):
             controls, "Gestures", "On · listening", "Off · paused",
             self.settings["gestures_on"], self._on_gestures_toggle,
         )
-        self.gestures_toggle.grid(row=2, column=0, sticky="ew", padx=(16, 10), pady=(10, 14))
+        self.gestures_toggle.grid(row=2, column=0, sticky="ew", padx=(16, 10), pady=10)
+        ctk.CTkFrame(controls, height=1, fg_color=theme.BORDER).grid(row=3, column=0, sticky="ew", padx=16)
+        self.virtual_cam_toggle = ToggleRow(
+            controls, "Virtual camera", "On · pick \"OBS Virtual Camera\" in Zoom/Meet", "Off",
+            self.settings["virtual_cam_on"], self._on_virtual_cam_toggle,
+        )
+        self.virtual_cam_toggle.grid(row=4, column=0, sticky="ew", padx=(16, 10), pady=(10, 14))
+        self._shown_vcam_error = None
 
         self.last_played_label = ctk.CTkLabel(
             sidebar, text="", justify="left", anchor="w", wraplength=220,
@@ -147,6 +154,12 @@ class MainWindow(ctk.CTk):
         self.gestures_toggle.show_status()
         save_settings(self.settings)
 
+    def _on_virtual_cam_toggle(self, on):
+        self.settings["virtual_cam_on"] = on
+        self.virtual_cam_toggle.show_status()
+        self._shown_vcam_error = None
+        save_settings(self.settings)
+
     def _on_sound_picked(self, gesture, sound):
         self.settings["mappings"][gesture] = None if sound == NO_SOUND else sound
         save_settings(self.settings)
@@ -185,6 +198,11 @@ class MainWindow(ctk.CTk):
 
         for row in self.rows:
             row.set_active(row.gesture in self.engine.active_gestures)
+
+        error = self.engine.virtual_cam.error
+        if error != self._shown_vcam_error:
+            self._shown_vcam_error = error
+            self.virtual_cam_toggle.show_status(error)
 
         if self.engine.last_played:
             gesture, sound = self.engine.last_played

@@ -56,7 +56,7 @@ class ToggleRow(ctk.CTkFrame):
         ctk.CTkLabel(
             self, text=title, font=theme.font(14, "bold"), text_color=theme.TEXT, anchor="w"
         ).grid(row=0, column=0, sticky="w")
-        self.status = ctk.CTkLabel(self, font=theme.font(12), anchor="w")
+        self.status = ctk.CTkLabel(self, font=theme.font(12), anchor="w", justify="left", wraplength=160)
         self.status.grid(row=1, column=0, sticky="w")
 
         self.switch = ctk.CTkSwitch(
@@ -74,7 +74,10 @@ class ToggleRow(ctk.CTkFrame):
     def is_on(self):
         return bool(self.switch.get())
 
-    def show_status(self):
+    def show_status(self, error=None):
+        if error:
+            self.status.configure(text=error, text_color=theme.DANGER)
+            return
         on = self.is_on()
         self.status.configure(
             text=self.on_text if on else self.off_text,

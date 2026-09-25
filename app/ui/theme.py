@@ -14,6 +14,7 @@ ACCENT = ("#7446D8", "#8B5CF6")
 ACCENT_HOVER = ("#6236C4", "#7C4DEA")
 ACCENT_SOFT = ("#EEE7FB", "#352C4A")
 ON_ACCENT = "#FFFFFF"
+DANGER = ("#C0392B", "#F87171")
 
 HEADING_FONT = "Bahnschrift SemiBold"
 BODY_FONT = "Segoe UI Variable Text"

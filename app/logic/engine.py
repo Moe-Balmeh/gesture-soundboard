@@ -2,11 +2,12 @@
 import threading
 import time
 
+from app.camera.virtual_cam import VirtualCam
 from app.camera.webcam import Webcam, to_preview
 from app.detection.detector import GestureDetector
 
 HOLD_FRAMES = 4  # how many frames a gesture has to be held before it plays
-PREVIEW_SIZE = (420, 315)
+PREVIEW_SIZE = (448, 252)
 
 
 class Engine:
@@ -22,6 +23,8 @@ class Engine:
         self._thread = None
         self._held = {}  # gesture -> frames held
         self._last_fired = {}  # gesture -> last time it played
+        self.virtual_cam = VirtualCam()
+        self._frame_size = (1280, 720)
 
     def start(self):
         self._running = True
@@ -49,10 +52,13 @@ class Engine:
         webcam = Webcam(self.settings.get("camera_index", 0))
         try:
             while self._running:
+                self._update_virtual_cam()
+
                 if not self.settings["camera_on"]:
                     webcam.close()
                     self._reset_gestures()
                     self.message = "Camera is off"
+                    self._send_off_screen()
                     time.sleep(0.1)
                     continue
 
@@ -60,6 +66,7 @@ class Engine:
                     self.message = "Opening camera..."
                     if not webcam.open():
                         self.message = "Camera not found. Is another app using it?"
+                        self._send_off_screen()
                         time.sleep(1)
                         continue
 
@@ -70,16 +77,37 @@ class Engine:
                     continue
                 self.message = None
 
+                size = (frame.shape[1], frame.shape[0])
+                if size != self._frame_size:
+                    # reopens at the webcam's real size on the next loop
+                    self._frame_size = size
+                    self.virtual_cam.close()
+
                 if self.settings["gestures_on"]:
                     self._play_new_gestures(detector.detect(frame))
                 else:
                     self._reset_gestures()
 
+                if self.virtual_cam.is_open:
+                    self.virtual_cam.send(frame)
+
                 with self._lock:
                     self._preview = to_preview(frame, PREVIEW_SIZE)
         finally:
             webcam.close()
+            self.virtual_cam.close()
             detector.close()
+
+    def _update_virtual_cam(self):
+        if not self.settings["virtual_cam_on"]:
+            self.virtual_cam.close()
+            self.virtual_cam.error = None  # turning it off and on again retries
+        elif not self.virtual_cam.is_open and self.virtual_cam.error is None:
+            self.virtual_cam.open(*self._frame_size)
+
+    def _send_off_screen(self):
+        if self.virtual_cam.is_open:
+            self.virtual_cam.send_off_screen()
 
     def _play_new_gestures(self, found):
         self.active_gestures = frozenset(found)
