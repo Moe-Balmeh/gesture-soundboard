@@ -31,7 +31,7 @@ def dropdown(master, values, command, width):
     )
 
 
-def outline_button(master, text, command):
+def outline_button(master, text, command, text_color=theme.TEXT):
     return ctk.CTkButton(
         master,
         text=text,
@@ -43,7 +43,7 @@ def outline_button(master, text, command):
         hover_color=theme.SURFACE_HOVER,
         border_width=1,
         border_color=theme.BORDER,
-        text_color=theme.TEXT,
+        text_color=text_color,
     )
 
 
@@ -73,6 +73,10 @@ class ToggleRow(ctk.CTkFrame):
 
     def is_on(self):
         return bool(self.switch.get())
+
+    def set_on(self, on):
+        self.switch.select() if on else self.switch.deselect()
+        self.show_status()
 
     def show_status(self, error=None):
         if error:

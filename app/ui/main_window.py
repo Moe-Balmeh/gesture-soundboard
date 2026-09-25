@@ -1,4 +1,5 @@
 import os
+import queue
 
 import customtkinter as ctk
 from PIL import Image
@@ -10,6 +11,7 @@ from app.paths import SOUNDS_DIR
 from app.settings.settings import load_settings, save_settings
 
 from . import theme
+from .tray import Tray
 from .widgets import NO_SOUND, GestureRow, ToggleRow, card, outline_button
 
 REFRESH_MS = 33  # ~30 fps
@@ -31,8 +33,13 @@ class MainWindow(ctk.CTk):
         self._build_sidebar()
         self._build_main_area()
 
+        self.tray_actions = queue.Queue()
+        self.tray = Tray(self.settings, self.tray_actions.put)
+        self._told_about_tray = False
+
         self.engine.start()
-        self.protocol("WM_DELETE_WINDOW", self._on_close)
+        self.tray.start()
+        self.protocol("WM_DELETE_WINDOW", self._hide_to_tray)
         self._refresh_id = self.after(REFRESH_MS, self._refresh)
 
     # layout
@@ -56,23 +63,24 @@ class MainWindow(ctk.CTk):
         controls = card(sidebar)
         controls.grid(row=2, column=0, sticky="ew", padx=16, pady=(28, 0))
         controls.grid_columnconfigure(0, weight=1)
-        self.camera_toggle = ToggleRow(
-            controls, "Camera", "On · live", "Off · free for other apps",
-            self.settings["camera_on"], self._on_camera_toggle,
-        )
-        self.camera_toggle.grid(row=0, column=0, sticky="ew", padx=(16, 10), pady=(14, 10))
-        ctk.CTkFrame(controls, height=1, fg_color=theme.BORDER).grid(row=1, column=0, sticky="ew", padx=16)
-        self.gestures_toggle = ToggleRow(
-            controls, "Gestures", "On · listening", "Off · paused",
-            self.settings["gestures_on"], self._on_gestures_toggle,
-        )
-        self.gestures_toggle.grid(row=2, column=0, sticky="ew", padx=(16, 10), pady=10)
-        ctk.CTkFrame(controls, height=1, fg_color=theme.BORDER).grid(row=3, column=0, sticky="ew", padx=16)
-        self.virtual_cam_toggle = ToggleRow(
-            controls, "Virtual camera", "On · pick \"OBS Virtual Camera\" in Zoom/Meet", "Off",
-            self.settings["virtual_cam_on"], self._on_virtual_cam_toggle,
-        )
-        self.virtual_cam_toggle.grid(row=4, column=0, sticky="ew", padx=(16, 10), pady=(10, 14))
+        self.toggles = {}
+        toggle_rows = [
+            ("camera_on", "Camera", "On · live", "Off · free for other apps"),
+            ("gestures_on", "Gestures", "On · listening", "Off · paused"),
+            ("virtual_cam_on", "Virtual camera", "On · pick \"OBS Virtual Camera\" in Zoom/Meet", "Off"),
+        ]
+        for i, (key, title, on_text, off_text) in enumerate(toggle_rows):
+            if i > 0:
+                ctk.CTkFrame(controls, height=1, fg_color=theme.BORDER).grid(
+                    row=i * 2 - 1, column=0, sticky="ew", padx=16
+                )
+            row = ToggleRow(
+                controls, title, on_text, off_text, self.settings[key],
+                lambda on, key=key: self._set_toggle(key, on),
+            )
+            first, last = i == 0, i == len(toggle_rows) - 1
+            row.grid(row=i * 2, column=0, sticky="ew", padx=(16, 10), pady=(14 if first else 10, 14 if last else 10))
+            self.toggles[key] = row
         self._shown_vcam_error = None
 
         self.last_played_label = ctk.CTkLabel(
@@ -95,7 +103,11 @@ class MainWindow(ctk.CTk):
             selected_hover_color=theme.ACCENT_SOFT, text_color=theme.TEXT,
         )
         appearance.set("System")
-        appearance.grid(row=7, column=0, sticky="ew", padx=16, pady=(0, 24))
+        appearance.grid(row=7, column=0, sticky="ew", padx=16, pady=(0, 16))
+        # the X button only hides to the tray, this one really closes
+        outline_button(sidebar, "Quit app", self._quit, text_color=theme.DANGER).grid(
+            row=8, column=0, sticky="ew", padx=16, pady=(0, 24)
+        )
 
     def _build_main_area(self):
         main = ctk.CTkFrame(self, fg_color="transparent")
@@ -144,21 +156,14 @@ class MainWindow(ctk.CTk):
 
     # actions
 
-    def _on_camera_toggle(self, on):
-        self.settings["camera_on"] = on
-        self.camera_toggle.show_status()
+    def _set_toggle(self, key, on):
+        # same path for the sidebar switches and the tray menu
+        self.settings[key] = on
+        self.toggles[key].set_on(on)
+        if key == "virtual_cam_on":
+            self._shown_vcam_error = None
         save_settings(self.settings)
-
-    def _on_gestures_toggle(self, on):
-        self.settings["gestures_on"] = on
-        self.gestures_toggle.show_status()
-        save_settings(self.settings)
-
-    def _on_virtual_cam_toggle(self, on):
-        self.settings["virtual_cam_on"] = on
-        self.virtual_cam_toggle.show_status()
-        self._shown_vcam_error = None
-        save_settings(self.settings)
+        self.tray.refresh()
 
     def _on_sound_picked(self, gesture, sound):
         self.settings["mappings"][gesture] = None if sound == NO_SOUND else sound
@@ -177,14 +182,42 @@ class MainWindow(ctk.CTk):
     def _on_appearance(self, mode):
         ctk.set_appearance_mode(mode.lower())
 
-    def _on_close(self):
+    def _hide_to_tray(self):
+        self.withdraw()
+        if not self._told_about_tray:
+            self._told_about_tray = True
+            self.tray.notify("Still running in the tray. Right-click the icon to quit.")
+
+    def _show(self):
+        self.deiconify()
+        self.lift()
+        self.focus_force()
+
+    def _quit(self):
         self.after_cancel(self._refresh_id)
+        self.tray.stop()
         self.engine.stop()
         self.destroy()
+
+    def _handle_tray_actions(self):
+        while not self.tray_actions.empty():
+            action, *args = self.tray_actions.get()
+            if action == "show":
+                self._show()
+            elif action == "toggle":
+                key = args[0]
+                self._set_toggle(key, not self.settings[key])
+            elif action == "quit":
+                self._quit()
+                return True
+        return False
 
     # live updates
 
     def _refresh(self):
+        if self._handle_tray_actions():
+            return  # app is closing
+
         frame = self.engine.take_preview()
         if self.engine.message:
             self.placeholder.configure(text=self.engine.message)
@@ -202,7 +235,7 @@ class MainWindow(ctk.CTk):
         error = self.engine.virtual_cam.error
         if error != self._shown_vcam_error:
             self._shown_vcam_error = error
-            self.virtual_cam_toggle.show_status(error)
+            self.toggles["virtual_cam_on"].show_status(error)
 
         if self.engine.last_played:
             gesture, sound = self.engine.last_played

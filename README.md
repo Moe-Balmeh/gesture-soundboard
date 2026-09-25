@@ -45,6 +45,7 @@ gesture-soundboard/
 │   ├── ui/                  UI/UX: everything you see
 │   │   ├── theme.py             colors and fonts
 │   │   ├── widgets.py           reusable pieces (cards, switches, gesture rows)
+│   │   ├── tray.py              the tray icon and its menu
 │   │   └── main_window.py       the window layout and buttons
 │   │
 │   ├── camera/              OpenCV: turns the webcam on/off, reads frames
@@ -93,6 +94,7 @@ Drop `.mp3` / `.wav` / `.ogg` files into `assets/sounds/`, click **Reload sounds
 - [x] Camera on/off toggle
 - [x] Virtual camera output (use in Zoom / Meet / TikTok Live Studio)
 - [x] 720p HD at 30 fps
-- [ ] System tray + global on/off hotkey
+- [x] System tray icon (keeps running when the window is closed)
+- [ ] Global hotkey to turn gestures on/off
 - [ ] Virtual microphone mixing (mic + soundboard)
 - [ ] Packaged `.exe` release
