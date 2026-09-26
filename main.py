@@ -1,8 +1,14 @@
 import ctypes
 import os
+import sys
 
 # without this media foundation takes ~2 min to open the webcam
 os.environ["OPENCV_VIDEOIO_MSMF_ENABLE_HW_TRANSFORMS"] = "0"
+# the .exe has no console, so anything a library prints would crash it
+if sys.stdout is None:
+    sys.stdout = open(os.devnull, "w")
+if sys.stderr is None:
+    sys.stderr = open(os.devnull, "w")
 # so the taskbar shows our icon instead of python's
 ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("GestureSoundboard")
 

@@ -1,6 +1,11 @@
+import sys
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+# as an .exe the assets, models and config.json sit next to the exe
+if getattr(sys, "frozen", False):
+    PROJECT_ROOT = Path(sys.executable).resolve().parent
+else:
+    PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 SOUNDS_DIR = PROJECT_ROOT / "assets" / "sounds"
 ICON_ICO = PROJECT_ROOT / "assets" / "icon.ico"

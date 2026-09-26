@@ -8,7 +8,17 @@ Play meme sounds with hand gestures and facial expressions, live on your webcam.
 - [Version 2](https://drive.google.com/file/d/1EY29OSpO9DdGiJB4h5Xu8Q9E5znVsyeM/view?usp=sharing): virtual camera, global hotkey, tray icon, light theme
 - [Version 1](https://drive.google.com/file/d/1ATZzzxDKFa7Ssc0xhwM8wj_Cj2zCe84p/view?usp=sharing): the original soundboard
 
-## Run it
+## Download (Windows)
+
+**[⬇️ Download the latest release](https://github.com/Moe-Balmeh/gesture-soundboard/releases/latest)**, no Python needed.
+
+1. Download `GestureSoundboard-v1.0.0-windows.zip` and unzip it (e.g. into Downloads or Documents).
+2. Open the `Gesture Soundboard` folder and double-click **Gesture Soundboard.exe**.
+3. Windows may show "Windows protected your PC" since the app isn't signed. Click **More info → Run anyway**.
+
+Keep the whole folder together, the exe needs `_internal`, `assets` and `models` next to it. Your settings are saved in `config.json` in that same folder.
+
+## Run from source
 
 Double-click **`Start Soundboard.bat`**, or:
 
@@ -19,6 +29,8 @@ py -3.11 -m venv .venv
 ```
 
 The first run downloads the AI models (~10 MB) into `models/`.
+
+To build the `.exe` yourself: `.\.venv\Scripts\python.exe -m pip install pyinstaller`, then `.\.venv\Scripts\python.exe build.py`. The app and a zip end up in `dist/`.
 
 ## How it works
 
@@ -43,6 +55,7 @@ The first run downloads the AI models (~10 MB) into `models/`.
 gesture-soundboard/
 ├── main.py                  Starts the app
 ├── Start Soundboard.bat     Double-click launcher
+├── build.py                 Builds the .exe and the release zip
 │
 ├── app/
 │   ├── ui/                  UI/UX: everything you see
@@ -121,4 +134,4 @@ Drop `.mp3` / `.wav` / `.ogg` files into `assets/sounds/`, click **Reload sounds
 - [x] Global hotkey to turn gestures on/off (changeable in the app)
 - [x] Turn individual gestures on/off
 - [x] Virtual microphone: your voice + the sounds mixed into Zoom / Meet / Discord
-- [ ] Packaged `.exe` release
+- [x] Packaged `.exe` release

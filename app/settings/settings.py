@@ -5,6 +5,20 @@ from app.detection.gestures import ALL_GESTURES
 from app.logic.hotkeys import DEFAULT_HOTKEY
 from app.paths import SETTINGS_FILE
 
+# so a fresh install already does something
+DEFAULT_SOUNDS = {
+    "Thumbs Up": "correct.mp3",
+    "Thumbs Down": "booing-crowed.mp3",
+    "Peace Sign": "la-peace.mp3",
+    "Open Palm": "tada.wav",
+    "Fist": "vine_boom.wav",
+    "Pointing Up": "gun shot.mp3",
+    "Rock On": "airhorn.wav",
+    "Mouth Open": "fahhh.mp3",
+    "Big Smile": "aww.mp3",
+    "Eyebrows Raised": "bruh.mp3",
+}
+
 DEFAULT_SETTINGS = {
     "camera_on": True,
     "gestures_on": True,
@@ -16,7 +30,7 @@ DEFAULT_SETTINGS = {
     "camera_index": 0,
     "cooldown_seconds": 1.3,
     "hotkey": DEFAULT_HOTKEY,
-    "mappings": {name: None for name, _ in ALL_GESTURES},
+    "mappings": {name: None for name, _ in ALL_GESTURES} | DEFAULT_SOUNDS,
     "enabled_gestures": {name: True for name, _ in ALL_GESTURES},
 }
 
