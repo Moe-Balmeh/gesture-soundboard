@@ -1,8 +1,7 @@
 import pystray
-from PIL import Image, ImageDraw
+from PIL import Image, ImageOps
 
-ON_COLOR = "#8B5CF6"
-OFF_COLOR = "#6B6963"
+from app.paths import ICON_PNG
 
 TOGGLES = [
     ("Camera", "camera_on"), ("Gestures", "gestures_on"), ("Virtual camera", "virtual_cam_on"),
@@ -11,13 +10,13 @@ TOGGLES = [
 
 
 def make_icon(on):
-    # purple when gestures are on, gray when off
-    image = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(image)
-    draw.rounded_rectangle((2, 2, 62, 62), radius=14, fill=ON_COLOR if on else OFF_COLOR)
-    for x, height in ((14, 18), (28, 34), (42, 24)):
-        draw.rounded_rectangle((x, 32 - height // 2, x + 8, 32 + height // 2), radius=4, fill="white")
-    return image
+    # the app icon when gestures are on, a gray copy when off
+    icon = Image.open(ICON_PNG).convert("RGBA")
+    if on:
+        return icon
+    gray = ImageOps.grayscale(icon).convert("RGBA")
+    gray.putalpha(icon.getchannel("A"))
+    return gray
 
 
 class Tray:

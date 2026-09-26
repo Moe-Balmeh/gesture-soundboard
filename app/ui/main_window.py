@@ -10,7 +10,7 @@ from app.detection.gestures import FACE_EXPRESSIONS, HAND_GESTURES
 from app.logic.engine import PREVIEW_SIZE, Engine
 from app.logic.hotkeys import HotkeyListener
 from app.logic.single_instance import listen_for_show
-from app.paths import SOUNDS_DIR
+from app.paths import ICON_ICO, SOUNDS_DIR
 from app.settings.settings import load_settings, save_settings
 
 from . import theme
@@ -27,8 +27,9 @@ class MainWindow(ctk.CTk):
     def __init__(self):
         super().__init__(fg_color=theme.BG)
         self.title("Gesture Soundboard")
+        self.iconbitmap(ICON_ICO)
         self.geometry("1280x720")
-        self.minsize(1200, 700)
+        self.minsize(1280, 700)
 
         self.settings = load_settings()
         self.player = SoundPlayer()

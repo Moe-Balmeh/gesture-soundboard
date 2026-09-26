@@ -1,26 +1,30 @@
 import customtkinter as ctk
 
-# (light, dark)
-BG = ("#F6F4FE", "#262624")
-SIDEBAR = ("#ECE7FD", "#1F1E1D")
-SURFACE = ("#FFFFFF", "#30302E")
-SURFACE_HOVER = ("#F2EFFB", "#3A3A37")
-BORDER = ("#E3DDF6", "#44433F")
-SWITCH_OFF = ("#D5CEEC", "#44433F")
-SIDEBAR_BUTTON = ("#FFFFFF", "#1F1E1D")
-CHIP_TRACK = ("#DDD5F8", "#3A3A37")
-CHIP_SELECTED = ("#FFFFFF", "#352C4A")
+from app.paths import HEADING_FONT_FILE
 
-TEXT = ("#1D1A2E", "#F5F4EF")
-TEXT_MUTED = ("#67628A", "#A6A39B")
+# (light, dark), light uses warm grays so it's not too bright
+BG = ("#ECEAE4", "#262624")
+SIDEBAR = ("#E2DFD7", "#1F1E1D")
+SURFACE = ("#F6F5F1", "#30302E")
+SURFACE_HOVER = ("#E9E6DF", "#3A3A37")
+BORDER = ("#D5D1C7", "#44433F")
+SWITCH_OFF = ("#B8B2A5", "#4A4945")
+SIDEBAR_BUTTON = ("#F6F5F1", "#1F1E1D")
+CHIP_TRACK = ("#D6D2C8", "#3A3A37")
+CHIP_SELECTED = ("#F6F5F1", "#352C4A")
 
-ACCENT = ("#7C3AED", "#8B5CF6")
-ACCENT_HOVER = ("#6D28D9", "#7C4DEA")
-ACCENT_SOFT = ("#EEE8FF", "#352C4A")
+TEXT = ("#2A2825", "#F5F4EF")
+TEXT_MUTED = ("#6E6A62", "#A6A39B")
+
+ACCENT = ("#6A4FD3", "#8B5CF6")
+ACCENT_HOVER = ("#5A40BF", "#7C4DEA")
+ACCENT_SOFT = ("#E3DDF3", "#352C4A")
 ON_ACCENT = "#FFFFFF"
-DANGER = ("#DC2626", "#F87171")
+DANGER = ("#C43D32", "#F87171")
 
-HEADING_FONT = "Bahnschrift SemiBold"
+# sora ships with the app so it looks the same on every pc (free font, see assets/fonts/OFL.txt)
+ctk.FontManager.load_font(str(HEADING_FONT_FILE))
+HEADING_FONT = "Sora SemiBold"
 BODY_FONT = "Segoe UI Variable Text"
 
 

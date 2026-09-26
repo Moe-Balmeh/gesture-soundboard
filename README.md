@@ -48,6 +48,7 @@ gesture-soundboard/
 │   ├── ui/                  UI/UX: everything you see
 │   │   ├── theme.py             colors and fonts
 │   │   ├── widgets.py           reusable pieces (cards, switches, gesture rows)
+│   │   ├── dropdown.py          the sound / mic picker with its popup list
 │   │   ├── tray.py              the tray icon and its menu
 │   │   ├── help_button.py       the ? Help popup (what to install, how to use)
 │   │   ├── hotkey_card.py       the card for changing the keyboard shortcut

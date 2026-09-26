@@ -1,7 +1,10 @@
+import ctypes
 import os
 
 # without this media foundation takes ~2 min to open the webcam
 os.environ["OPENCV_VIDEOIO_MSMF_ENABLE_HW_TRANSFORMS"] = "0"
+# so the taskbar shows our icon instead of python's
+ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("GestureSoundboard")
 
 from app.logic.single_instance import already_running  # noqa: E402
 from app.ui.main_window import run  # noqa: E402

@@ -1,6 +1,8 @@
 import customtkinter as ctk
+from PIL import Image, ImageDraw, ImageFilter
 
 from . import theme
+from .dropdown import Dropdown
 
 NO_SOUND = "No sound"
 
@@ -12,50 +14,64 @@ def card(master, radius=12):
 
 
 def dropdown(master, values, command, width):
-    return ctk.CTkOptionMenu(
-        master,
-        values=values,
-        command=command,
-        width=width,
-        height=34,
-        corner_radius=8,
-        font=theme.font(13),
-        dropdown_font=theme.font(13),
-        fg_color=theme.SURFACE_HOVER,
-        button_color=theme.SURFACE_HOVER,
-        button_hover_color=theme.BORDER,
-        text_color=theme.TEXT,
-        dropdown_fg_color=theme.SURFACE,
-        dropdown_hover_color=theme.ACCENT_SOFT,
-        dropdown_text_color=theme.TEXT,
-        dynamic_resizing=False,  # long file names get cut off instead of stretching the row
-    )
+    return Dropdown(master, values, command, width)
 
 
-class Switch(ctk.CTkSwitch):
-    # the border follows the track color so the white knob never blends into a white card
+SWITCH_SIZE = (44, 24)
+
+
+def _switch_image(on, mode):
+    # drawn 4x bigger then shrunk so the edges come out smooth
+    scale = 4
+    w, h = SWITCH_SIZE[0] * scale, SWITCH_SIZE[1] * scale
+    track = (theme.ACCENT if on else theme.SWITCH_OFF)[mode]
+    image = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(image)
+    draw.rounded_rectangle((0, 0, w - 1, h - 1), radius=h // 2, fill=track)
+
+    pad = 3 * scale
+    size = h - 2 * pad
+    x = w - pad - size if on else pad
+    shadow = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    ImageDraw.Draw(shadow).ellipse((x - scale, pad - scale, x + size + scale, pad + size + scale), fill=(0, 0, 0, 50))
+    image.alpha_composite(shadow.filter(ImageFilter.GaussianBlur(scale)))  # soft even shadow all around
+    draw.ellipse((x, pad, x + size, pad + size), fill=theme.ON_ACCENT)
+    return image.resize((SWITCH_SIZE[0] * 2, SWITCH_SIZE[1] * 2), Image.LANCZOS)
+
+
+_switch_images = {}
+
+
+def switch_image(on):
+    if on not in _switch_images:
+        _switch_images[on] = ctk.CTkImage(_switch_image(on, 0), _switch_image(on, 1), size=SWITCH_SIZE)
+    return _switch_images[on]
+
+
+class Switch(ctk.CTkLabel):
+    # ctk's own switch has a seam around the knob, this one is just two pictures
     def __init__(self, master, command):
-        super().__init__(
-            master, text="", width=44, switch_width=44, switch_height=22, command=command,
-            border_width=3, progress_color=theme.ACCENT, fg_color=theme.SWITCH_OFF,
-            button_color=theme.ON_ACCENT, button_hover_color=theme.ON_ACCENT,
-        )
-        self._match_border()
+        self._is_on = False
+        self._on_click = command
+        super().__init__(master, text="", image=switch_image(False), cursor="hand2")
+        self.bind("<Button-1>", self.toggle)
+
+    def get(self):
+        return int(self._is_on)
 
     def toggle(self, event=None):
-        super().toggle(event)
-        self._match_border()
+        self._set(not self._is_on)
+        self._on_click()
 
-    def select(self, from_variable_callback=False):
-        super().select(from_variable_callback)
-        self._match_border()
+    def select(self):
+        self._set(True)
 
-    def deselect(self, from_variable_callback=False):
-        super().deselect(from_variable_callback)
-        self._match_border()
+    def deselect(self):
+        self._set(False)
 
-    def _match_border(self):
-        self.configure(border_color=theme.ACCENT if self.get() else theme.SWITCH_OFF)
+    def _set(self, on):
+        self._is_on = on
+        self.configure(image=switch_image(on))
 
 
 def switch(master, command):
@@ -157,4 +173,4 @@ class GestureRow(ctk.CTkFrame):
             self.configure(fg_color=theme.ACCENT_SOFT if active else "transparent")
 
     def set_sound_names(self, names):
-        self.menu.configure(values=[NO_SOUND] + names)
+        self.menu.set_values([NO_SOUND] + names)
